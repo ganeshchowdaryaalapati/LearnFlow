@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LearnFlow – Personal Learning Tracker</title>
+  <meta name="description" content="Cross-device personal learning roadmap tracker with real-time sync">
+  <meta name="theme-color" content="#0a0e1a">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:            #0a0e1a;
+      --surface:       rgba(255,255,255,0.045);
+      --surface-h:     rgba(255,255,255,0.075);
+      --border:        rgba(255,255,255,0.08);
+      --border-a:      rgba(139,92,246,0.45);
+      --text:          #e8eaf0;
+      --text-d:        #9ca3af;
+      --text-m:        #6b7280;
+      --accent:        #8b5cf6;
+      --accent-l:      #a78bfa;
+      --cyan:          #06b6d4;
+      --green:         #10b981;
+      --rose:          #f43f5e;
+      --amber:         #f59e0b;
+      --r:             16px;
+      --r-s:           10px;
+      --r-xs:          6px;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    body {
+      background-image:
+        radial-gradient(ellipse 60% 50% at 15% 15%, rgba(139,92,246,.13) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 85% 85%, rgba(6,182,212,.09) 0%, transparent 70%);
+      min-height: 100vh;
+    }
+
+    #app { max-width: 860px; margin: 0 auto; padding: 0 16px 120px; }
+
+    /* ─── SCROLLBAR ─────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 2px; }
+
+    /* ─── HEADER ────────────────────────────────── */
+    .hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 0 14px;
+      position: sticky; top: 0; z-index: 90;
+      background: rgba(10,14,26,.88);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+    }
+    .hdr-brand { display: flex; align-items: center; gap: 10px; }
+    .hdr-logo {
+      width: 38px; height: 38px; border-radius: 11px;
+      background: linear-gradient(135deg, var(--accent), var(--cyan));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 19px; flex-shrink: 0;
+    }
+    .hdr-title {
+      font-size: 1.15rem; font-weight: 800; line-height: 1;
+      background: linear-gradient(135deg, #a78bfa, #06b6d4);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hdr-sub { font-size: .68rem; color: var(--text-m); margin-top: 2px; }
+
+    /* ─── SYNC PILL ──────────────────────────────── */
+    .sync-pill {
+      display: flex; align-items: center; gap: 7px;
+      padding: 7px 13px; border-radius: 20px;
+      border: 1px solid var(--border); background: var(--surface);
+      font-size: .75rem; color: var(--text-d); cursor: pointer;
+      transition: all .15s; font-family: inherit;
+    }
+    .sync-pill:hover { border-color: var(--border-a); color: var(--text); }
+    .sdot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green); animation: pulse 2s infinite;
+    }
+    .sdot.syncing { background: var(--amber); animation: none; }
+    .sdot.error   { background: var(--rose);  animation: none; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ─── BUTTONS ────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 6px; border: none; cursor: pointer; font-family: inherit;
+      font-weight: 600; transition: all .15s; border-radius: var(--r-s);
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(.96); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #7c3aed);
+      color: #fff; padding: 10px 20px; font-size: .875rem;
+      box-shadow: 0 4px 16px rgba(139,92,246,.3);
+    }
+    .btn-primary:hover { box-shadow: 0 6px 22px rgba(139,92,246,.45); transform: translateY(-1px); }
+    .btn-sec {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text-d); padding: 9px 16px; font-size: .875rem;
+    }
+    .btn-sec:hover { background: var(--surface-h); color: var(--text); }
+    .btn-danger {
+      background: rgba(244,63,94,.08); border: 1px solid rgba(244,63,94,.2);
+      color: var(--rose); padding: 7px 14px; font-size: .78rem; font-weight: 600;
+    }
+    .btn-danger:hover { background: rgba(244,63,94,.15); }
+    .btn-ghost {
+      background: transparent; border: none; color: var(--text-m);
+      padding: 5px 8px; font-size: .8rem;
+    }
+    .btn-ghost:hover { color: var(--text); }
+
+    /* ─── BACK BTN ───────────────────────────────── */
+    .back-btn {
+      display: flex; align-items: center; gap: 8px;
+      color: var(--text-m); cursor: pointer; font-size: .875rem; font-weight: 500;
+      padding: 10px 0 6px; transition: color .15s;
+      background: none; border: none; font-family: inherit;
+    }
+    .back-btn:hover { color: var(--text); }
+
+    /* ─── COURSE GRID ────────────────────────────── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 14px; margin-top: 18px;
+    }
+    @media(max-width:480px){ .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 20px; cursor: pointer;
+      transition: all .2s; position: relative; overflow: hidden;
+    }
+    .card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--ca, linear-gradient(90deg, var(--accent), var(--cyan)));
+    }
+    .card:hover { background: var(--surface-h); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,.4); }
+    .card-title { font-size: .95rem; font-weight: 700; margin-bottom: 5px; }
+    .card-desc { font-size: .75rem; color: var(--text-m); margin-bottom: 12px; line-height: 1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .card-meta { display: flex; gap: 10px; font-size: .7rem; color: var(--text-d); margin-bottom: 10px; flex-wrap:wrap; }
+    .pbar { height: 4px; background: rgba(255,255,255,.08); border-radius: 2px; overflow: hidden; }
+    .pfill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--accent), var(--cyan)); transition: width .4s; }
+    .pct-label { font-size: .68rem; color: var(--text-m); margin-top: 5px; text-align: right; }
+
+    /* ─── FAB ────────────────────────────────────── */
+    .fab {
+      position: fixed; bottom: 26px; right: 20px;
+      width: 58px; height: 58px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #7c3aed);
+      border: none; color: #fff; font-size: 26px; cursor: pointer;
+      box-shadow: 0 8px 24px rgba(139,92,246,.5);
+      transition: all .2s; display: flex; align-items: center; justify-content: center;
+      z-index: 200; font-family: inherit;
+    }
+    .fab:hover { transform: scale(1.08); box-shadow: 0 12px 30px rgba(139,92,246,.6); }
+    .fab:active { transform: scale(.94); }
+
+    /* ─── COURSE HEADER ──────────────────────────── */
+    .c-hdr { padding: 10px 0 18px; }
+    .c-title {
+      font-size: 1.45rem; font-weight: 800; margin-bottom: 5px;
+      background: linear-gradient(135deg, var(--text), #9ca3af);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .c-desc  { font-size: .82rem; color: var(--text-m); margin-bottom: 14px; }
+    .c-meta  { display: flex; align-items: center; gap: 12px; font-size: .78rem; color: var(--text-d); flex-wrap: wrap; }
+
+    /* ─── SECTION BLOCK ──────────────────────────── */
+    .sec-block {
+      margin-bottom: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); overflow: hidden; transition: border-color .2s;
+    }
+    .sec-block:hover { border-color: rgba(255,255,255,.12); }
+    .sec-hdr {
+      display: flex; align-items: center; gap: 10px;
+      padding: 13px 16px; cursor: pointer; user-select: none;
+      transition: background .15s;
+    }
+    .sec-hdr:hover { background: rgba(255,255,255,.03); }
+    .sec-arrow { color: var(--text-m); font-size: 11px; transition: transform .2s; flex-shrink: 0; }
+    .sec-arrow.open { transform: rotate(90deg); }
+    .sec-name  { font-size: .88rem; font-weight: 600; flex: 1; }
+    .sec-badge {
+      font-size: .68rem; color: var(--text-m);
+      background: rgba(255,255,255,.06); padding: 2px 8px; border-radius: 10px;
+    }
+    .sec-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; margin-left: 6px; }
+    .sec-edit-btn, .sec-del-btn {
+      width: 26px; height: 26px; border-radius: 50%; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 12px;
+      transition: all .15s; background: transparent;
+    }
+    .sec-edit-btn { color: var(--accent-l); }
+    .sec-edit-btn:hover { background: rgba(139,92,246,.15); transform: scale(1.1); }
+    .sec-del-btn { color: var(--rose); }
+    .sec-del-btn:hover { background: rgba(244,63,94,.15); transform: scale(1.1); }
+
+    /* ─── TOPIC LIST ──────────────────────────────── */
+    .t-list { padding: 2px 8px 10px; }
+    .t-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 8px; border-radius: var(--r-s);
+      transition: background .15s; position: relative;
+    }
+    .t-item:hover { background: rgba(255,255,255,.04); }
+
+    /* State circle */
+    .t-state {
+      width: 24px; height: 24px; border-radius: 50%;
+      border: 2px solid var(--border); background: transparent;
+      cursor: pointer; transition: all .18s; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; color: transparent; font-family: inherit;
+    }
+    .t-state:hover { border-color: var(--accent-l); }
+    .t-state.progress { border-color: var(--amber); background: rgba(245,158,11,.12); color: var(--amber); }
+    .t-state.done { border-color: var(--green); background: var(--green); color: #fff; }
+
+    .t-name { flex: 1; font-size: .855rem; color: var(--text-d); line-height: 1.4; }
+    .t-name.progress { color: var(--text); }
+    .t-name.done { color: var(--text-m); text-decoration: line-through; }
+    .t-hrs { font-size: .68rem; color: var(--text-m); white-space: nowrap; }
+    .t-del {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: rgba(244,63,94,.08); border: none; color: var(--rose);
+      cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;
+      transition: all .15s; flex-shrink: 0;
+    }
+    .t-del:hover { background: rgba(244,63,94,.22); transform: scale(1.1); }
+
+    /* topic action group */
+    .t-actions {
+      display: flex; align-items: center; gap: 4px; flex-shrink: 0; margin-left: auto;
+    }
+    .t-edit-btn {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: rgba(139,92,246,.08); border: none; color: var(--accent-l);
+      cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;
+      transition: all .15s; flex-shrink: 0;
+    }
+    .t-edit-btn:hover { background: rgba(139,92,246,.22); transform: scale(1.1); }
+
+    /* ─── ADD TOPIC ROW ──────────────────────────── */
+    .add-t-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px 4px; }
+    .add-t-inp {
+      flex: 1; background: rgba(255,255,255,.03); border: 1px dashed rgba(255,255,255,.12);
+      border-radius: var(--r-xs); padding: 7px 10px; font-family: inherit;
+      font-size: .8rem; color: var(--text); outline: none; transition: border-color .15s;
+    }
+    .add-t-inp::placeholder { color: var(--text-m); }
+    .add-t-inp:focus { border-color: var(--border-a); border-style: solid; }
+    .add-t-btn {
+      background: rgba(139,92,246,.14); border: 1px solid rgba(139,92,246,.28);
+      border-radius: var(--r-xs); color: var(--accent-l);
+      font-size: .72rem; font-weight: 700; padding: 6px 12px; cursor: pointer;
+      white-space: nowrap; font-family: inherit; transition: all .15s;
+    }
+    .add-t-btn:hover { background: rgba(139,92,246,.24); }
+
+    /* ─── EDIT / RENAME BUTTONS ─────────────────── */
+    .edit-name-btn {
+      background: rgba(139,92,246,.12); border: 1px solid rgba(139,92,246,.25);
+      border-radius: var(--r-xs); color: var(--accent-l);
+      font-size: .72rem; font-weight: 700; padding: 5px 11px;
+      cursor: pointer; font-family: inherit; transition: all .15s;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .edit-name-btn:hover { background: rgba(139,92,246,.24); }
+
+    .card-edit-btn {
+      background: rgba(255,255,255,.06); border: 1px solid var(--border);
+      border-radius: var(--r-xs); color: var(--text-m);
+      font-size: .75rem; padding: 3px 7px; cursor: pointer;
+      transition: all .15s; flex-shrink: 0; line-height: 1;
+    }
+    .card-edit-btn:hover { background: rgba(139,92,246,.15); color: var(--accent-l); border-color: rgba(139,92,246,.3); }
+
+    /* ─── ADD SECTION BTN ────────────────────────── */
+    .add-sec-btn {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 13px 16px; background: var(--surface); border: 1px dashed rgba(255,255,255,.1);
+      border-radius: var(--r); color: var(--text-m); font-family: inherit;
+      font-size: .82rem; cursor: pointer; transition: all .15s; margin-top: 6px;
+    }
+    .add-sec-btn:hover { background: var(--surface-h); color: var(--text); border-color: rgba(255,255,255,.2); }
+
+    /* ─── MODAL ──────────────────────────────────── */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.72);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      z-index: 500; display: flex; align-items: flex-end; justify-content: center;
+      animation: fadeIn .2s ease;
+    }
+    @media(min-width:600px){ .overlay { align-items: center; } }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    @keyframes slideUp { from{transform:translateY(44px);opacity:0} to{transform:none;opacity:1} }
+
+    .modal {
+      background: #0f1629; border: 1px solid rgba(255,255,255,.1);
+      border-radius: 24px 24px 0 0; width: 100%; max-width: 540px;
+      max-height: 92vh; overflow-y: auto; padding: 24px;
+      animation: slideUp .25s ease;
+    }
+    @media(min-width:600px){ .modal { border-radius: 24px; } }
+
+    .m-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .m-title { font-size: 1.05rem; font-weight: 700; }
+    .m-close {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text-m); cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center; transition: all .15s;
+    }
+    .m-close:hover { color: var(--text); background: var(--surface-h); }
+
+    /* Tabs */
+    .tabs { display:flex; gap:4px; background:var(--surface); border-radius:var(--r-s); padding:4px; margin-bottom:18px; }
+    .tab {
+      flex:1; padding:8px; border-radius:var(--r-xs); font-size:.78rem; font-weight:600;
+      color:var(--text-m); background:transparent; border:none; cursor:pointer; transition:all .15s; font-family:inherit;
+    }
+    .tab.on { background:rgba(139,92,246,.2); color:var(--accent-l); }
+
+    /* Form */
+    .fg { margin-bottom: 14px; }
+    .flabel { display:block; font-size:.72rem; font-weight:700; color:var(--text-d); margin-bottom:6px; text-transform:uppercase; letter-spacing:.06em; }
+    .finp, .ftxt {
+      width:100%; background:rgba(255,255,255,.04); border:1px solid var(--border);
+      border-radius:var(--r-s); padding:10px 14px; font-family:inherit;
+      font-size:.875rem; color:var(--text); outline:none; transition:border-color .15s;
+    }
+    .finp:focus, .ftxt:focus { border-color: var(--border-a); }
+    .finp::placeholder, .ftxt::placeholder { color: var(--text-m); }
+    .ftxt { min-height:160px; resize:vertical; line-height:1.5; }
+    .fhint { font-size:.68rem; color:var(--text-m); margin-top:4px; }
+    .f-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+
+    /* Sync info box */
+    .sync-box {
+      background: rgba(6,182,212,.06); border: 1px solid rgba(6,182,212,.15);
+      border-radius: var(--r-s); padding: 13px; font-size: .78rem;
+      color: var(--text-d); line-height: 1.65; margin-bottom: 16px;
+    }
+
+    /* Code display */
+    .code-display {
+      background: rgba(0,0,0,.3); border: 1px solid var(--border);
+      border-radius: var(--r-xs); padding: 10px 14px; font-family: monospace;
+      font-size: .9rem; color: var(--accent-l); letter-spacing: .08em;
+      display: flex; align-items: center; justify-content: space-between;
+      margin: 8px 0;
+    }
+    .copy-btn {
+      font-size: .68rem; padding: 4px 10px; background: rgba(139,92,246,.15);
+      border: 1px solid rgba(139,92,246,.25); border-radius: var(--r-xs);
+      color: var(--accent-l); cursor: pointer; font-family: inherit; font-weight: 600;
+      transition: all .15s;
+    }
+    .copy-btn:hover { background: rgba(139,92,246,.28); }
+
+    /* ─── TOAST ──────────────────────────────────── */
+    #toasts {
+      position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+      z-index: 600; display: flex; flex-direction: column; align-items: center;
+      gap: 8px; pointer-events: none; width: calc(100% - 32px); max-width: 360px;
+    }
+    .toast {
+      background: rgba(15,22,41,.96); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px; padding: 10px 16px; font-size: .8rem; font-weight: 500;
+      color: var(--text); backdrop-filter: blur(20px); text-align: center;
+      width: 100%; animation: toastIn .28s ease;
+    }
+    @keyframes toastIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+
+    /* ─── EMPTY STATE ────────────────────────────── */
+    .empty { text-align: center; padding: 60px 20px; }
+    .empty-ico { font-size: 52px; margin-bottom: 16px; }
+    .empty-ttl { font-size: 1.1rem; font-weight: 700; color: var(--text-d); margin-bottom: 8px; }
+    .empty-sub { font-size: .83rem; color: var(--text-m); line-height: 1.65; }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toasts"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════════════════
+const STORE    = 'lf_v3';
+const SC_STORE = 'lf_sc_v3';
+const CHUNK    = 3600;
+
+const ACCENTS = [
+  'linear-gradient(90deg,#8b5cf6,#06b6d4)',
+  'linear-gradient(90deg,#f59e0b,#ef4444)',
+  'linear-gradient(90deg,#10b981,#06b6d4)',
+  'linear-gradient(90deg,#f43f5e,#8b5cf6)',
+  'linear-gradient(90deg,#06b6d4,#10b981)',
+  'linear-gradient(90deg,#a78bfa,#f472b6)',
+];
+
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let courses   = [];
+let ts        = 0;          // last-write timestamp
+let syncCode  = '';
+let syncSt    = 'live';     // 'live'|'syncing'|'error'
+
+// view state
+let view      = 'home';     // 'home'|'course'
+let activeId  = null;
+let collapsed = new Set();  // collapsed section ids
+let modal     = null;       // null|'add'|'sync'
+let tab       = 'paste';    // 'paste'|'manual'
+let paste     = {text:'', title:''};
+let manual    = {title:'', desc:'', cat:''};
+
+// ── IDs ──────────────────────────────────────────────
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+
+// ══════════════════════════════════════════════════════
+//  PERSISTENCE
+// ══════════════════════════════════════════════════════
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE);
+    if (raw) { const d = JSON.parse(raw); courses = d.courses||[]; ts = d.ts||0; }
+  } catch {}
+  syncCode = localStorage.getItem(SC_STORE) || ('lf-'+Math.random().toString(36).slice(2,8));
+  localStorage.setItem(SC_STORE, syncCode);
+}
+
+function save() {
+  localStorage.setItem(STORE, JSON.stringify({ courses, ts }));
+}
+
+// ══════════════════════════════════════════════════════
+//  SYNC ENGINE
+// ══════════════════════════════════════════════════════
+let lastPushed = '';
+let chunks     = {};
+let evtSrc     = null;
+let pollId     = null;
+
+function ch() {
+  return 'learnflow_' + syncCode.toLowerCase().replace(/[^a-z0-9]/g, '_');
+}
+
+async function push() {
+  try {
+    setSyncSt('syncing');
+    const payload = JSON.stringify({ v:3, ts: Date.now(), courses });
+    lastPushed = payload;
+    const channel = ch();
+    if (payload.length <= CHUNK) {
+      await fetch('https://ntfy.sh/' + channel, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: payload
+      });
+    } else {
+      const id = uid(), tot = Math.ceil(payload.length / CHUNK);
+      for (let i=0; i<tot; i++) {
+        await fetch('https://ntfy.sh/' + channel, {
+          method:'POST',
+          body: JSON.stringify({ _c:1, id, i, tot, d: payload.slice(i*CHUNK,(i+1)*CHUNK) })
+        });
+        if (i < tot-1) await sleep(180);
+      }
+    }
+    setSyncSt('live');
+  } catch(e) {
+    console.warn('[sync] push:', e);
+    setSyncSt('error');
+  }
+}
+
+function receive(raw) {
+  if (!raw) return;
+  try {
+    const msg = JSON.parse(raw);
+    if (msg._c) {
+      // chunked
+      if (!chunks[msg.id]) chunks[msg.id] = new Array(msg.tot).fill(null);
+      chunks[msg.id][msg.i] = msg.d;
+      if (chunks[msg.id].every(s => s !== null)) {
+        const full = chunks[msg.id].join('');
+        delete chunks[msg.id];
+        apply(full);
+      }
+      return;
+    }
+    if (Array.isArray(msg.courses)) apply(raw);
+  } catch {}
+}
+
+function apply(payloadStr) {
+  if (payloadStr === lastPushed) return;
+  try {
+    const p = JSON.parse(payloadStr);
+    if (!Array.isArray(p.courses)) return;
+    const remoteTs = p.ts || p.updatedAt || 1;
+    // Only update if remote is newer OR same age (allows immediate sync)
+    if (remoteTs >= ts) {
+      const remStr = JSON.stringify(p.courses);
+      if (remStr === JSON.stringify(courses)) return;
+      courses = p.courses;
+      ts = remoteTs;
+      lastPushed = payloadStr;
+      save();
+      render();
+      toast('⚡ Synced from another device!');
+      setSyncSt('live');
+    }
+  } catch {}
+}
+
+async function pull() {
+  try {
+    const res = await fetch('https://ntfy.sh/' + ch() + '/json?poll=1&since=12h');
+    if (!res.ok) return;
+    const text = await res.text();
+    for (const line of text.trim().split('\n').filter(Boolean)) {
+      try {
+        const p = JSON.parse(line);
+        if (p?.message) receive(p.message);
+      } catch {}
+    }
+    setSyncSt('live');
+  } catch { setSyncSt('error'); }
+}
+
+function openSSE() {
+  try {
+    if (evtSrc) { evtSrc.close(); evtSrc=null; }
+    evtSrc = new EventSource('https://ntfy.sh/' + ch() + '/sse');
+    evtSrc.onopen    = ()  => setSyncSt('live');
+    evtSrc.onmessage = (e) => {
+      try { const d=JSON.parse(e.data); if (d?.message) receive(d.message); } catch {}
+    };
+    evtSrc.onerror = () => {
+      setSyncSt('error'); pull();
+      setTimeout(openSSE, 5000);
+    };
+  } catch { setTimeout(openSSE, 5000); }
+}
+
+function initSync() {
+  pull();
+  openSSE();
+  if (pollId) clearInterval(pollId);
+  pollId = setInterval(pull, 30000);
+}
+
+function setSyncSt(s) {
+  syncSt = s;
+  const dot = document.getElementById('sdot');
+  const txt = document.getElementById('stxt');
+  if (dot) dot.className = 'sdot' + (s!=='live'?' '+s:'');
+  if (txt) txt.textContent = s==='syncing'?'Syncing…':s==='error'?'Offline':'Live Sync';
+}
+
+// ── helpers ──────────────────────────────────────────
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+function stats(course) {
+  let total=0, done=0, prog=0;
+  for (const sec of course.sections||[]) {
+    for (const t of sec.topics||[]) {
+      total++;
+      if (t.state==='done') done++;
+      else if (t.state==='progress') prog++;
+    }
+  }
+  return { total, done, prog, pct: total ? Math.round(done/total*100) : 0 };
+}
+
+function esc(s) {
+  return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+}
+
+// ══════════════════════════════════════════════════════
+//  CRUD
+// ══════════════════════════════════════════════════════
+function commit() { ts=Date.now(); save(); push(); }
+
+function addCourse(c)       { courses.unshift(c); commit(); }
+function removeCourse(id)   { courses=courses.filter(c=>c.id!==id); commit(); }
+
+function cycleState(cid, tid) {
+  const c = courses.find(c=>c.id===cid); if(!c) return;
+  for (const s of c.sections) for (const t of s.topics) if (t.id===tid) {
+    const S=['idle','progress','done']; t.state=S[(S.indexOf(t.state||'idle')+1)%3];
+  }
+  c.updatedAt=Date.now(); commit();
+}
+
+function addTopic(cid, sid, title) {
+  const c=courses.find(c=>c.id===cid); if(!c) return;
+  const s=c.sections.find(s=>s.id===sid); if(!s) return;
+  s.topics.push({id:uid(),title,state:'idle',hours:1});
+  c.updatedAt=Date.now(); commit();
+}
+
+function removeTopic(cid, sid, tid) {
+  const c=courses.find(c=>c.id===cid); if(!c) return;
+  const s=c.sections.find(s=>s.id===sid); if(!s) return;
+  s.topics=s.topics.filter(t=>t.id!==tid);
+  c.updatedAt=Date.now(); commit();
+}
+
+function renameTopic(cid, sid, tid, newTitle) {
+  const c=courses.find(c=>c.id===cid); if(!c) return;
+  const s=c.sections.find(s=>s.id===sid); if(!s) return;
+  const t=s.topics.find(t=>t.id===tid); if(!t) return;
+  t.title = newTitle;
+  c.updatedAt=Date.now(); commit();
+  render();
+  toast(`✅ Topic renamed!`);
+}
+
+function addSection(cid, title) {
+  const c=courses.find(c=>c.id===cid); if(!c) return;
+  c.sections.push({id:uid(),title,topics:[]});
+  c.updatedAt=Date.now(); commit();
+}
+
+function renameSection(cid, sid, newTitle) {
+  const c=courses.find(c=>c.id===cid); if(!c) return;
+  const s=c.sections.find(s=>s.id===sid); if(!s) return;
+  s.title = newTitle;
+  c.updatedAt=Date.now(); commit();
+  render();
+  toast(`✅ Section renamed!`);
+}
+
+function removeSection(cid, sid) {
+  const c=courses.find(c=>c.id===cid); if(!c) return;
+  c.sections=c.sections.filter(s=>s.id!==sid);
+  c.updatedAt=Date.now(); commit();
+  render();
+  toast(`🗑️ Section deleted!`);
+}
+
+function renameCourse(cid, newTitle) {
+  const c=courses.find(c=>c.id===cid); if(!c) return;
+  c.title = newTitle;
+  c.updatedAt=Date.now(); commit();
+  render();
+  toast(`✅ Renamed to "${newTitle}"! Syncing…`);
+}
+
+// ══════════════════════════════════════════════════════
+//  CHATGPT PARSER
+// ══════════════════════════════════════════════════════
+function parse(text, title, cat) {
+  const lines = text.split('\n');
+  const secs  = [];
+  let cur     = null;
+  let found   = title||'';
+
+  for (const raw of lines) {
+    const ln = raw.trim();
+    if (!ln) continue;
+
+    // Title from first H1
+    if (!found && /^#\s+/.test(ln)) { found=ln.replace(/^#+\s+/,'').trim(); continue; }
+
+    // Section heading (##, ###, Week N, Module N, Phase N, **bold**)
+    if (/^#{1,3}\s+/.test(ln) ||
+        /^(week|module|phase|unit|chapter|step|part|section)\s+\d+/i.test(ln)) {
+      const t = ln.replace(/^#+\s+/,'').replace(/\*\*/g,'').trim();
+      cur = { id:uid(), title:t, topics:[] };
+      secs.push(cur);
+      continue;
+    }
+
+    // Topic line
+    if (/^[-*•✓✗➤→\d]\s+/.test(ln) || /^\[[ x✓]\]/.test(ln)) {
+      if (!cur) { cur={id:uid(),title:'Getting Started',topics:[]}; secs.push(cur); }
+      let t = ln
+        .replace(/^[-*•✓✗➤→]\s+/,'')
+        .replace(/^\d+\.\s+/,'')
+        .replace(/^\[[ x✓]\]\s*/,'')
+        .replace(/\*\*/g,'')
+        .replace(/\s*\(\d+\s*hr[s]?\)/gi,'')
+        .trim();
+      if (!t) continue;
+      const hrs  = ln.match(/(\d+)\s*hr/i);
+      const done = /^\[x\]|^\[✓\]|^✓/.test(ln.trim());
+      cur.topics.push({id:uid(),title:t,state:done?'done':'idle',hours:hrs?+hrs[1]:1});
+    }
+  }
+
+  if (!secs.length) {
+    const s={id:uid(),title:'Topics',topics:[]};
+    for (const raw of lines) {
+      const ln=raw.trim().replace(/^[-*•]\s*/,'');
+      if (ln) s.topics.push({id:uid(),title:ln,state:'idle',hours:1});
+    }
+    secs.push(s);
+  }
+
+  return {
+    id:uid(), title:found||'My Roadmap', desc:'', category:cat||'General',
+    accent:ACCENTS[courses.length%ACCENTS.length],
+    sections:secs, createdAt:Date.now(), updatedAt:Date.now()
+  };
+}
+
+// ══════════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════════
+function toast(msg) {
+  const a=document.getElementById('toasts'); if(!a) return;
+  const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+  a.appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(()=>el.remove(),320);},2700);
+}
+
+// ══════════════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════════════
+function render() {
+  const app=document.getElementById('app'); if(!app) return;
+  let h = renderHeader();
+  h += view==='home' ? renderHome() : renderCourse();
+  if (modal) h += renderModal();
+  app.innerHTML = h;
+  bind();
+}
+
+// ── Header ───────────────────────────────────────────
+function renderHeader() {
+  return `
+  <header class="hdr">
+    <div class="hdr-brand">
+      <div class="hdr-logo">🎯</div>
+      <div><div class="hdr-title">LearnFlow</div><div class="hdr-sub">Personal Study Tracker</div></div>
+    </div>
+    <button class="sync-pill" id="J_sync_settings">
+      <span class="sdot ${syncSt!=='live'?syncSt:''}" id="sdot"></span>
+      <span id="stxt">${syncSt==='syncing'?'Syncing…':syncSt==='error'?'Offline':'Live Sync'}</span>
+    </button>
+  </header>`;
+}
+
+// ── Home ─────────────────────────────────────────────
+function renderHome() {
+  if (!courses.length) return `
+    <div class="empty">
+      <div class="empty-ico">📚</div>
+      <div class="empty-ttl">No courses yet</div>
+      <div class="empty-sub">
+        Tap the <strong>＋</strong> button below to add your first learning roadmap.<br>
+        Syncs instantly between your phone and laptop!
+      </div>
+    </div>
+    <button class="fab" id="J_fab">＋</button>`;
+
+  let h='<div class="grid">';
+  for (const c of courses) {
+    const s=stats(c);
+    h+=`
+    <div class="card" data-cid="${c.id}" style="--ca:${c.accent||ACCENTS[0]}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div class="card-title">${esc(c.title)}</div>
+        <button class="card-edit-btn" data-edit-cid="${c.id}" title="Rename course">✏️</button>
+      </div>
+      ${c.desc?`<div class="card-desc">${esc(c.desc)}</div>`:''}
+      <div class="card-meta">
+        <span>✅ ${s.done} done</span>
+        ${s.prog?`<span>🔵 ${s.prog} in progress</span>`:''}
+        <span>📝 ${s.total} topics</span>
+      </div>
+      <div class="pbar"><div class="pfill" style="width:${s.pct}%"></div></div>
+      <div class="pct-label">${s.pct}% complete</div>
+    </div>`;
+  }
+  h += '</div><button class="fab" id="J_fab">＋</button>';
+  return h;
+}
+
+// ── Course detail ─────────────────────────────────────
+function renderCourse() {
+  const c=courses.find(c=>c.id===activeId);
+  if (!c) { view='home'; return renderHome(); }
+  const s=stats(c);
+  let h=`
+  <button class="back-btn" id="J_back">← My Courses</button>
+  <div class="c-hdr">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div class="c-title" style="margin-bottom:0">${esc(c.title)}</div>
+      <button class="edit-name-btn" id="J_edit_name" data-cid="${c.id}" title="Edit course name">✏️ Rename</button>
+    </div>
+    ${c.desc?`<div class="c-desc" style="margin-top:6px">${esc(c.desc)}</div>`:''}
+    <div class="c-meta" style="margin-top:10px">
+      <span>📝 ${s.total} topics</span>
+      <span>✅ ${s.done} done</span>
+      ${s.prog?`<span>🔵 ${s.prog} in progress</span>`:''}
+      <span style="color:var(--accent-l);font-weight:700">${s.pct}% complete</span>
+      <button class="btn-danger" id="J_del_course">🗑️ Delete</button>
+    </div>
+    <div class="pbar" style="margin-top:12px;height:6px">
+      <div class="pfill" style="width:${s.pct}%"></div>
+    </div>
+  </div>`;
+
+  for (const sec of c.sections) {
+    const isOpen = !collapsed.has(sec.id);
+    const done   = sec.topics.filter(t=>t.state==='done').length;
+    h+=`
+    <div class="sec-block">
+      <div class="sec-hdr" data-sid="${sec.id}">
+        <span class="sec-arrow ${isOpen?'open':''}">▶</span>
+        <span class="sec-name">${esc(sec.title)}</span>
+        <span class="sec-badge">${done}/${sec.topics.length}</span>
+        <div class="sec-actions">
+          <button class="sec-edit-btn" data-cid="${c.id}" data-sid="${sec.id}" title="Edit section name">✏️</button>
+          <button class="sec-del-btn" data-cid="${c.id}" data-sid="${sec.id}" title="Delete section">🗑️</button>
+        </div>
+      </div>
+      ${isOpen?`
+      <div class="t-list">
+        ${sec.topics.map(t=>`
+        <div class="t-item">
+          <button class="t-state ${t.state==='progress'?'progress':t.state==='done'?'done':''}"
+            data-cid="${c.id}" data-tid="${t.id}" title="idle → in progress → done">
+            ${t.state==='done'?'✓':t.state==='progress'?'●':''}
+          </button>
+          <span class="t-name ${t.state||''}">${esc(t.title)}</span>
+          <div class="t-actions">
+            ${t.hours?`<span class="t-hrs">${t.hours}h</span>`:''}
+            <button class="t-edit-btn" data-cid="${c.id}" data-sid="${sec.id}" data-tid="${t.id}" title="Edit topic name">✏️</button>
+            <button class="t-del" data-cid="${c.id}" data-sid="${sec.id}" data-tid="${t.id}" title="Delete topic">🗑️</button>
+          </div>
+        </div>`).join('')}
+        <div class="add-t-row">
+          <input class="add-t-inp" placeholder="＋ Add topic…" data-sid="${sec.id}">
+          <button class="add-t-btn" data-sid="${sec.id}">Add</button>
+        </div>
+      </div>`:''}</div>`;
+  }
+
+  h += `<button class="add-sec-btn" id="J_add_sec">＋ Add new section</button><div style="height:80px"></div>`;
+  return h;
+}
+
+// ── Modals ────────────────────────────────────────────
+function renderModal() {
+  if (modal==='add') return renderAddModal();
+  if (modal==='sync') return renderSyncModal();
+  return '';
+}
+
+function renderAddModal() {
+  return `
+  <div class="overlay" id="J_overlay">
+    <div class="modal">
+      <div class="m-hdr">
+        <div class="m-title">Add New Course</div>
+        <button class="m-close" id="J_mclose">×</button>
+      </div>
+      <div class="tabs">
+        <button class="tab ${tab==='paste'?'on':''}" data-tab="paste">🤖 Paste ChatGPT</button>
+        <button class="tab ${tab==='manual'?'on':''}" data-tab="manual">✏️ Create Manually</button>
+      </div>
+      ${tab==='paste'?`
+        <div class="fg">
+          <label class="flabel">Course Title (optional)</label>
+          <input class="finp" id="J_ptitle" placeholder="Auto-detected from your text" value="${esc(paste.title)}">
+        </div>
+        <div class="fg">
+          <label class="flabel">Paste ChatGPT Roadmap</label>
+          <textarea class="ftxt" id="J_ptext" placeholder="## Module 1: Basics&#10;- Topic 1&#10;- Topic 2&#10;&#10;## Module 2: Advanced&#10;- Topic 3">${esc(paste.text)}</textarea>
+          <div class="fhint">Supports ## headings, bullet lists, checkboxes, numbered lists</div>
+        </div>
+        <div class="f-actions">
+          <button class="btn btn-sec" id="J_mcancel">Cancel</button>
+          <button class="btn btn-primary" id="J_paste_go">Import Roadmap 🚀</button>
+        </div>
+      `:`
+        <div class="fg">
+          <label class="flabel">Course Title</label>
+          <input class="finp" id="J_mtitle" placeholder="e.g. Python Basics, DSA, AWS…" value="${esc(manual.title)}">
+        </div>
+        <div class="fg">
+          <label class="flabel">Description</label>
+          <input class="finp" id="J_mdesc" placeholder="Short description (optional)" value="${esc(manual.desc)}">
+        </div>
+        <div class="fg">
+          <label class="flabel">Category</label>
+          <input class="finp" id="J_mcat" placeholder="Programming, Business, Language…" value="${esc(manual.cat)}">
+        </div>
+        <div class="f-actions">
+          <button class="btn btn-sec" id="J_mcancel">Cancel</button>
+          <button class="btn btn-primary" id="J_manual_go">Create Course ✨</button>
+        </div>
+      `}
+    </div>
+  </div>`;
+}
+
+function renderSyncModal() {
+  return `
+  <div class="overlay" id="J_overlay">
+    <div class="modal">
+      <div class="m-hdr">
+        <div class="m-title">🔄 Sync Between Devices</div>
+        <button class="m-close" id="J_mclose">×</button>
+      </div>
+      <div class="sync-box">
+        📱 To sync between your <strong>phone and laptop</strong>, both devices must use the <strong>exact same Sync Code</strong>.<br><br>
+        👨‍👩‍👧 Share this code with family/friends to share your courses with them too.
+      </div>
+      <div class="fg">
+        <label class="flabel">Your Current Sync Code</label>
+        <div class="code-display">
+          <span id="J_codedisp">${esc(syncCode)}</span>
+          <button class="copy-btn" id="J_copy">Copy</button>
+        </div>
+        <div class="fhint">Both devices must have the identical code. Case-insensitive.</div>
+      </div>
+      <div class="fg" style="margin-top:14px">
+        <label class="flabel">Change Sync Code</label>
+        <input class="finp" id="J_sc_inp" placeholder="Enter sync code from another device…">
+      </div>
+      <div class="f-actions">
+        <button class="btn btn-sec" id="J_mclose2">Close</button>
+        <button class="btn btn-primary" id="J_sc_save">Save & Connect ✅</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+//  EVENT BINDING
+// ══════════════════════════════════════════════════════
+function bind() {
+  // header
+  q('J_sync_settings', 'click', ()=>{ modal='sync'; render(); });
+  // fab
+  q('J_fab', 'click', ()=>{ modal='add'; tab='paste'; render(); });
+  // back
+  q('J_back', 'click', ()=>{ view='home'; render(); });
+
+  // rename course (from course detail view)
+  q('J_edit_name', 'click', (e)=>{
+    e.stopPropagation();
+    const cid = document.getElementById('J_edit_name')?.dataset.cid;
+    const course = courses.find(c=>c.id===cid);
+    if (!course) return;
+    const newName = prompt('Rename course:', course.title);
+    if (newName && newName.trim() && newName.trim() !== course.title) {
+      renameCourse(cid, newName.trim());
+    }
+  });
+
+  // rename course (from home card ✏️ button)
+  document.querySelectorAll('.card-edit-btn[data-edit-cid]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const cid = btn.dataset.editCid;
+      const course = courses.find(c=>c.id===cid);
+      if (!course) return;
+      const newName = prompt('Rename course:', course.title);
+      if (newName && newName.trim() && newName.trim() !== course.title) {
+        renameCourse(cid, newName.trim());
+      }
+    });
+  });
+
+  // delete course
+  q('J_del_course', 'click', ()=>{
+    if (!confirm('Delete this course?')) return;
+    removeCourse(activeId); view='home'; activeId=null; render(); toast('Course deleted.');
+  });
+  // add section
+  q('J_add_sec', 'click', ()=>{
+    const t=prompt('Section name:');
+    if (t&&t.trim()) { addSection(activeId,t.trim()); render(); toast('Section added!'); }
+  });
+
+  // course cards
+  document.querySelectorAll('.card[data-cid]').forEach(el=>{
+    el.addEventListener('click', ()=>{ activeId=el.dataset.cid; view='course'; render(); });
+  });
+
+  // section collapse/expand
+  document.querySelectorAll('.sec-hdr[data-sid]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const id=el.dataset.sid;
+      collapsed.has(id)?collapsed.delete(id):collapsed.add(id);
+      render();
+    });
+  });
+
+  // section edit
+  document.querySelectorAll('.sec-edit-btn[data-sid]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const { cid, sid } = el.dataset;
+      const course = courses.find(c=>c.id===cid);
+      if (!course) return;
+      const sec = course.sections.find(s=>s.id===sid);
+      if (!sec) return;
+      const newTitle = prompt('Edit section name:', sec.title);
+      if (newTitle && newTitle.trim() && newTitle.trim() !== sec.title) {
+        renameSection(cid, sid, newTitle.trim());
+      }
+    });
+  });
+
+  // section delete
+  document.querySelectorAll('.sec-del-btn[data-sid]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      if (!confirm('Delete this section and all its topics?')) return;
+      removeSection(el.dataset.cid, el.dataset.sid);
+    });
+  });
+
+  // topic state cycle
+  document.querySelectorAll('.t-state[data-tid]').forEach(el=>{
+    el.addEventListener('click', e=>{ e.stopPropagation(); cycleState(el.dataset.cid, el.dataset.tid); render(); });
+  });
+
+  // topic delete
+  document.querySelectorAll('.t-del[data-tid]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      if (!confirm('Delete this topic?')) return;
+      removeTopic(el.dataset.cid, el.dataset.sid, el.dataset.tid); render(); toast('Topic deleted.');
+    });
+  });
+
+  // topic edit / rename
+  document.querySelectorAll('.t-edit-btn[data-tid]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const { cid, sid, tid } = el.dataset;
+      const course = courses.find(c=>c.id===cid);
+      if (!course) return;
+      const sec = course.sections.find(s=>s.id===sid);
+      if (!sec) return;
+      const topic = sec.topics.find(t=>t.id===tid);
+      if (!topic) return;
+      const newTitle = prompt('Edit topic name:', topic.title);
+      if (newTitle && newTitle.trim() && newTitle.trim() !== topic.title) {
+        renameTopic(cid, sid, tid, newTitle.trim());
+      }
+    });
+  });
+
+  // add topic (button)
+  document.querySelectorAll('.add-t-btn[data-sid]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const inp=document.querySelector(`.add-t-inp[data-sid="${btn.dataset.sid}"]`);
+      if (inp&&inp.value.trim()) { addTopic(activeId, btn.dataset.sid, inp.value.trim()); render(); toast('Topic added!'); }
+    });
+  });
+
+  // add topic (Enter)
+  document.querySelectorAll('.add-t-inp[data-sid]').forEach(inp=>{
+    inp.addEventListener('keydown', e=>{
+      if (e.key==='Enter'&&inp.value.trim()) { addTopic(activeId, inp.dataset.sid, inp.value.trim()); render(); toast('Topic added!'); }
+    });
+  });
+
+  // modal overlay click-outside
+  q('J_overlay', 'click', e=>{ if (e.target.id==='J_overlay') { modal=null; render(); } });
+  ['J_mclose','J_mclose2','J_mcancel'].forEach(id=>q(id,'click',()=>{ modal=null; render(); }));
+
+  // tabs
+  document.querySelectorAll('.tab[data-tab]').forEach(el=>{
+    el.addEventListener('click', ()=>{ tab=el.dataset.tab; render(); });
+  });
+
+  // paste text change (preserve while tab is open)
+  const ptEl=document.getElementById('J_ptext');
+  if (ptEl) ptEl.addEventListener('input', e=>{ paste.text=e.target.value; });
+  const ppEl=document.getElementById('J_ptitle');
+  if (ppEl) ppEl.addEventListener('input', e=>{ paste.title=e.target.value; });
+
+  // paste import
+  q('J_paste_go', 'click', ()=>{
+    const txt=document.getElementById('J_ptext')?.value||'';
+    const ttl=document.getElementById('J_ptitle')?.value||'';
+    if (!txt.trim()) { toast('Please paste some roadmap text first.'); return; }
+    const c=parse(txt,ttl,'ChatGPT Import');
+    addCourse(c); activeId=c.id; view='course'; modal=null;
+    paste={text:'',title:''}; render();
+    toast(`🚀 "${c.title}" imported! Syncing…`);
+  });
+
+  // manual create
+  q('J_manual_go', 'click', ()=>{
+    const title=document.getElementById('J_mtitle')?.value.trim()||'';
+    const desc =document.getElementById('J_mdesc')?.value.trim()||'';
+    const cat  =document.getElementById('J_mcat')?.value.trim()||'General';
+    if (!title) { toast('Please enter a course title.'); return; }
+    const c={
+      id:uid(), title, desc, category:cat,
+      accent:ACCENTS[courses.length%ACCENTS.length],
+      sections:[{id:uid(),title:'Getting Started',topics:[{id:uid(),title:'Introduction',state:'idle',hours:1}]}],
+      createdAt:Date.now(), updatedAt:Date.now()
+    };
+    addCourse(c); activeId=c.id; view='course'; modal=null;
+    manual={title:'',desc:'',cat:''}; render();
+    toast(`✨ "${title}" created! Syncing…`);
+  });
+
+  // sync code copy
+  q('J_copy', 'click', ()=>{
+    navigator.clipboard?.writeText(syncCode).then(()=>toast('Sync code copied!')).catch(()=>{
+      const el=document.getElementById('J_codedisp');
+      if(el){ const r=document.createRange(); r.selectNode(el); window.getSelection()?.removeAllRanges(); window.getSelection()?.addRange(r); }
+      toast('Select and copy the code manually.');
+    });
+  });
+
+  // sync code save
+  q('J_sc_save', 'click', ()=>{
+    const v=document.getElementById('J_sc_inp')?.value.trim()||'';
+    if (!v) { toast('Enter a sync code first.'); return; }
+    syncCode=v; localStorage.setItem(SC_STORE,syncCode);
+    chunks={}; initSync(); modal=null; render();
+    toast('✅ Sync code saved! Connecting…');
+  });
+}
+
+function q(id, evt, fn) {
+  const el=document.getElementById(id);
+  if (el) el.addEventListener(evt, fn);
+}
+
+// ══════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════
+load();
+render();
+window.addEventListener('focus', ()=>pull&&pull());
+document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState==='visible') pull&&pull(); });
+setTimeout(initSync, 400);
+</script>
+</body>
+</html>
